@@ -1,0 +1,163 @@
+openapi: 3.1.0
+info:
+  title: Review Insights API
+  version: 1.0.0
+  description: |
+    Daily AI-powered review summaries for Holiday Extras products.
+    Summaries are generated from reviews-service data (BigQuery primary, RPC fallback),
+    grouped by chipscode and base_product from HXCM.
+servers:
+  - url: http://localhost:3020
+    description: Local sandbox
+
+paths:
+
+  /reviews/{chipscode}/summary:
+    get:
+      summary: AI summary for a chipscode
+      operationId: getSummaryByChipscode
+      parameters:
+        - name: chipscode
+          in: path
+          required: true
+          schema: { type: string }
+          example: LGW9
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              example:
+                chipscode: "LGW9"
+                baseProduct: "LGW"
+                productName: "Gatwick Long Stay North"
+                summary: "Customers rate this car park very highly. The shuttle bus is consistently praised for being frequent and reliable. A few reviewers mention the walk from the bus drop-off can be long with heavy luggage, but the majority say the process was smooth and stress-free."
+                score: 8.7
+                scoreOutOf: 10
+                qualityLabel: "Excellent"
+                totalReviews: 1423
+                reviewsUsedForSummary: 50
+                wouldBookAgainPercent: 94
+                lastUpdated: "2026-07-01T06:00:00Z"
+                nextUpdateAt: "2026-07-02T06:00:00Z"
+        '404':
+          description: Chipscode not found or no reviews yet
+
+  /reviews/summary:
+    get:
+      summary: Batch summaries for multiple chipscodes
+      operationId: getBatchSummaries
+      parameters:
+        - name: chipscodes
+          in: query
+          required: true
+          schema: { type: string }
+          description: Comma-separated chipscodes
+          example: "LGW9,LGWP1,LGWH1"
+      responses:
+        '200':
+          description: Summaries
+          content:
+            application/json:
+              example:
+                summaries:
+                  - chipscode: "LGW9"
+                    baseProduct: "LGW"
+                    productName: "Gatwick Long Stay North"
+                    summary: "Customers rate this car park very highly..."
+                    score: 8.7
+                    scoreOutOf: 10
+                    qualityLabel: "Excellent"
+                    totalReviews: 1423
+                    wouldBookAgainPercent: 94
+                    lastUpdated: "2026-07-01T06:00:00Z"
+                  - chipscode: "LGWP1"
+                    baseProduct: "LGW"
+                    productName: "Bloc Hotel Gatwick"
+                    summary: "Reviewers love the location directly in the South Terminal..."
+                    score: 9.1
+                    scoreOutOf: 10
+                    qualityLabel: "Excellent"
+                    totalReviews: 876
+                    wouldBookAgainPercent: 97
+                    lastUpdated: "2026-07-01T06:00:00Z"
+                generatedAt: "2026-07-01T06:00:00Z"
+
+  /reviews/base/{baseProduct}/summary:
+    get:
+      summary: All chipscode summaries for a base product
+      operationId: getSummaryByBaseProduct
+      parameters:
+        - name: baseProduct
+          in: path
+          required: true
+          schema: { type: string }
+          example: LGW
+      responses:
+        '200':
+          description: All summaries for location
+          content:
+            application/json:
+              example:
+                baseProduct: "LGW"
+                location: "London Gatwick"
+                summaries:
+                  - chipscode: "LGW9"
+                    productName: "Gatwick Long Stay North"
+                    score: 8.7
+                    qualityLabel: "Excellent"
+                    totalReviews: 1423
+                    summary: "Customers rate this car park very highly..."
+                    lastUpdated: "2026-07-01T06:00:00Z"
+                  - chipscode: "LGWP1"
+                    productName: "Bloc Hotel Gatwick"
+                    score: 9.1
+                    qualityLabel: "Excellent"
+                    totalReviews: 876
+                    summary: "Reviewers love the location directly in the South Terminal..."
+                    lastUpdated: "2026-07-01T06:00:00Z"
+                generatedAt: "2026-07-01T06:00:00Z"
+
+  /reviews/{chipscode}/raw:
+    get:
+      summary: Raw reviews pass-through from reviews-service
+      operationId: getRawReviews
+      parameters:
+        - name: chipscode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: pastMonths
+          in: query
+          schema: { type: integer }
+          description: Only return reviews from this many months back
+        - name: highRatedOnly
+          in: query
+          schema: { type: boolean, default: false }
+          description: Only return reviews with rating >= 8
+      responses:
+        '200':
+          description: Raw reviews
+          content:
+            application/json:
+              example:
+                chipscode: "LGW9"
+                totalReviews: 1423
+                reviews:
+                  - reviewId: "rev_abc123"
+                    rating: 9
+                    commentText: "Great shuttle service, very frequent. Would definitely use again."
+                    wouldBookProduct: true
+                    wouldBookService: true
+                    brand: "HX"
+                    createdAt: "2026-06-15T10:22:00Z"
+                  - reviewId: "rev_def456"
+                    rating: 8
+                    commentText: "Good value, easy process. Shuttle slightly long wait at peak time."
+                    wouldBookProduct: true
+                    wouldBookService: true
+                    brand: "HX"
+                    createdAt: "2026-06-10T08:11:00Z"
